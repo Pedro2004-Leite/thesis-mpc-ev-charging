@@ -1,0 +1,77 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+% babel português se existir (Overleaf); localmente cai para o default se faltar texlive-langportuguese
+\IfFileExists{portuguese.ldf}{\usepackage[portuguese]{babel}}{}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{amssymb}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+
+\setlist{itemsep=0.2em,topsep=0.4em}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcommand{\ckN}{$\square$}  % por ler
+\newcommand{\ckY}{$\boxtimes$} % lido
+
+\title{Ordem de leitura}
+\author{Tese: MPC para carregadores e bateria sob incerteza}
+\date{}
+
+\begin{document}
+\maketitle
+
+A ordem segue a prioridade atual: primeiro a ferramenta, depois o previsor de chegada, partida e energia dos EVs ligado ao MPC, depois o sistema integrado e os métodos de difusão, e por fim os componentes de PV e edifício e os papers de apoio e de enquadramento.
+Em cada paper, a última coluna diz o que procurar, para ler com um objetivo.
+A caixa à esquerda marca o estado: $\square$ por ler, $\boxtimes$ lido.
+
+\begin{center}
+\small\renewcommand{\arraystretch}{1.3}
+\begin{longtable}{@{}c r P{1.9cm} P{5.0cm} P{5.9cm}@{}}
+\toprule
+& \# & Paper & Porque nesta posição & O que tirar \\
+\midrule
+\endhead
+\ckN & 1 & ACN-Sim & Toda a validação depende dele. São 9 páginas e define o vocabulário (EVSE, pilot signal, constraints, scheduler). & Arquitetura, modelo de bateria dos EVs, restrições de corrente, como correm os case studies com OpenDSS. Ver também o guia de integração com o pandapower. \\
+\ckN & 2 & Lee (ACN) & Descreve o sistema ACN completo do Caltech e o Adaptive Scheduling Algorithm (ASA), um MPC convexo com restrições trifásicas desequilibradas, quantização do sinal piloto e bateria não ideal. Complementa o ACN-Sim e é a fonte do escalonador de referência da validação. & Arquitetura (secções III e IV), modelo de restrições de corrente (equações 1 e 2), formulação do MPC e funções de utilidade (secção V), rampdown, cenários e resultados (secção VI). Não trata PV, bateria estacionária nem previsão. \\
+\ckY & 3 & Engel & Dá a arquitetura em dois níveis e o modelo de EVs por carregador. É forte na arquitetura e fraco na previsão, e não tem rede. & Agregador e distribuidor, estados de energia e capacidade, custo, GMMs de chegada, permanência e energia. Lido parcialmente. \\
+\ckY & 4 & Amara & Benchmark de previsão de EVs que modela cada sessão como (chegada, duração, energia), com número de sessões mais modelo de misturas. É a fonte da previsão determinística do baseline de Zhang. & Abordagem bottom-up contra direta, GRU-MM e SARIMA-MM, NHPP, datasets abertos, métricas, quantos dados são precisos. Previsão pontual. \\
+\ckY & 5 & McClone & Segundo melhor para o previsor: prevê chegada, energia e permanência de cada EV com ML e liga ao MPC, com baseline de persistência. & Features, TreeBagger, LSTM e kNN, previsão por EV, ganho em pico e custo face à persistência. Previsão pontual, sem incerteza. \\
+\ckN & 6 & LiGuo (2014) & Carta de duas páginas, origem da ideia de incluir no MPC os EVs que se esperam ligar no futuro. O Zhang adapta daqui a formulação de eventos correntes e futuros. Leitura rápida. & Função objetivo dividida em termo corrente e termo da frota futura, restrições do modelo de frota (equação 3), efeito da precisão da previsão (Tabela II). Trata a frota agregada, não eventos individuais. \\
+\ckN & 7 & Genov & Dá o protocolo de previsão de energia e permanência no ACN-Data, com GMM, LightGBM e Similar Sessions. Não prevê a chegada. & Features, protocolo de avaliação, efeito da quantidade de dados, para os baselines do previsor. \\
+\ckN & 8 & DiffPLF & É o método central da hipótese, mas prevê carga agregada e não chegada, partida e energia por EV. & Arquitetura do modelo, condicionamento, métricas probabilísticas (CRPS), dados usados. \\
+\ckN & 9 & Li & DiffCharge, do mesmo grupo do DiffPLF, gera cenários de carga de EVs por difusão sobre o ACN-Data. Mostra como substituir o GMM. & Arquitetura de difusão, condicionamento, comparação com GMM, VAEGAN e TimeGAN, aplicação ao mercado day-ahead. \\
+\ckY & 10 & Zhang & Foca-se na incerteza dos inputs do utilizador (partida e energia pedida) com difusão, o que é mais específico do que o previsor. O GMM de chegadas futuras e o desenho MPC continuam úteis. & Desenho experimental, métricas, baselines, GMM de chegadas futuras, como a difusão entra no MPC, o que falta (PV, edifício, bateria, rede). \\
+\ckN & 11 & Mesbah & Enquadramento de MPC estocástico para a secção do estado da arte: separa o MPC robusto do estocástico e as abordagens por tubos, política afim e cenários. & Formulação geral, restrições probabilísticas, abordagens por amostras e cenários, problemas em aberto. Ler a introdução e as partes sobre amostras e cenários. \\
+\ckN & 12 & Thurner & É a ferramenta de rede da co-simulação: fluxo de potência, fluxo de potência ótimo e séries temporais. Trata redes equilibradas, o que convém confirmar. & Fluxo de potência, fluxo ótimo com restrições de tensão e carga, estudo de caso de séries temporais. Ler por alto. \\
+\ckN & 13 & Zheng & MPC distribuído para estações de carregamento com fluxo de potência ótimo convexificado e restrições de tensão e de linha. Dá a formulação de rede dentro do controlador, mas só trata chegadas incertas dos EVs, sem PV, bateria nem previsão probabilística. & Formulação do OPF e relaxação convexa (secções de modelo e restrições), horizonte deslizante, caso 1 (IEEE de 15 barramentos, 20 cenários com 10\% de erro, MPC contra offline e ótimo). Ler por alto, só resumo, formulação e caso 1. \\
+\ckN & 14 & Grob & Liga previsão PV probabilística a controlo estocástico e ao limite de injeção na rede. & Modelo de previsão, programação dinâmica estocástica, como o limite de injeção entra. \\
+\ckN & 15 & Brown & Previsão PV probabilística Bayesiana mais SMPC, com scoring rules multivariadas. & Métricas multivariadas, comparação com LSTM e persistência, ganho no custo. \\
+\ckN & 16 & Saleem & Só controla a bateria e os EVs entram como procura, por isso não ajuda a controlar carregadores. Fica como referência de MPC estocástico com tensão no ponto de ligação. Leitura adiada por decisão. & Custo esperado sobre cenários com uma decisão única (equações 36 a 47) e a restrição de tensão. Ler só se for preciso um exemplo de MPC estocástico com rede. \\
+\ckN & 17 & Zhong & Alternativa para tratar as amostras do previsor no MPC, com restrições robustas a erros na distribuição. Prioridade baixa, a avaliar quando o MPC por cenários estiver estável. & Ideia do círculo de Wasserstein, a lei afim de controlo, as hipóteses (sistema linear, perturbação aditiva) e se se aplica ao PV, ao edifício e às chegadas de EVs. Ler por alto. \\
+\ckN & 18 & Loparo & Incerteza do edifício e o energy trim para erro de previsão solar. & Modelo do edifício, dois níveis de MPC, trim. \\
+\ckN & 19 & Ran & Baseline de previsão pontual de carga de EVs no ACN-Data. & Protocolo e métricas, para a tabela de comparação. Pode ser lido em diagonal. \\
+\ckN & 20 & Cheng & Idem, outra arquitetura. & Idem. Pode ser lido em diagonal. \\
+\ckN & 21 & Figueiredo & Referência metodológica para ajustar o GMM e escolher o número de componentes sem inicialização cuidadosa. Só é necessário se o EM com BIC do Amara der problemas. & Algoritmo com critério de minimum message length, eliminação de componentes, robustez à inicialização. Ler por alto, só a introdução e o algoritmo. \\
+\ckN & 22 & Torres & MPC integrado em dois níveis com regulação terciária. É uma extensão possível, não o núcleo. & Estrutura do EMS, dimensão do sistema (até 240 EVs). \\
+\ckN & 23 & Pajic & Não é fonte de método. É o modelo de paper indicado pelo professor. & Ler cedo a estrutura (só introdução e conclusões) e reler no fim, na fase de escrita. \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\section*{Notas}
+
+\begin{itemize}
+  \item Os passos 1 a 5 chegam para desenhar a formulação do MPC, o previsor de chegada, partida e energia e a sua entrada no MPC.
+  \item Os passos 6 a 8 fecham os métodos de difusão.
+  \item Os passos 9 e 10 dão o enquadramento de MPC estocástico (Mesbah) e a ferramenta de rede (Thurner). Os passos 11 a 14 fecham os componentes de PV e edifício, a referência de MPC estocástico com tensão e a alternativa distribucionalmente robusta.
+  \item Os passos 15 a 20 servem a revisão de literatura e a tabela de comparação, e o 18 é uma referência metodológica sobre GMMs.
+  \item Marcar \texttt{status: lido} no frontmatter de cada nota da vault quando o paper estiver lido, e preencher ``O que tirar'' na própria nota.
+  \item O paper de Jeste e Kamaci (hipótese) ainda não está disponível.
+\end{itemize}
+
+\end{document}

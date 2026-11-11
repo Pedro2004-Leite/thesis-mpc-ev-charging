@@ -1,0 +1,157 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+% babel português se existir (Overleaf); localmente cai para o default se faltar texlive-langportuguese
+\IfFileExists{portuguese.ldf}{\usepackage[portuguese]{babel}}{}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+
+\setlist{itemsep=0.2em,topsep=0.4em}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\title{Plano da tese}
+\author{MPC para carregadores e bateria sob incerteza}
+\date{}
+
+\begin{document}
+\maketitle
+
+Este plano parte de todo o contexto do projeto: MPC para carregadores de EVs e bateria, três fontes de incerteza (PV, edifício, EVs), ACN-Sim como plataforma, pandapower em malha fechada, e o cenário a) da hipótese (o previsor de difusão alimenta o MPC).
+Não tem datas, porque o calendário da tese não foi definido.
+Cada fase tem um critério de conclusão, para saber quando passar à seguinte.
+
+\section{Contribuições alvo}
+
+\begin{itemize}
+  \item \textbf{C1, co-simulação em malha fechada ACN-Sim e pandapower.} O paper do ACN-Sim diz que o feedback da rede é trabalho futuro. Ver o guia de integração.
+  \item \textbf{C2, valor da previsão no controlo, para vários perfis de operador.} A qualidade do previsor mede-se pelo seu efeito no MPC (custo, pico, violações, energia entregue), e não só pelo erro de previsão, e pela distância ao oráculo. O previsor de difusão é um dos candidatos. Parte de DiffPLF e Zhang.
+  \item \textbf{C3, estudo conjunto das três incertezas} num sistema com PV, edifício, bateria e EVs, com restrições de rede. Nenhum dos 17 papers cobre isto de ponta a ponta. O Saleem é o mais próximo nas três incertezas e na tensão, mas só controla a bateria e trata os EVs como procura. O Engel controla os EVs com PV, bateria e edifício, mas sem rede. Nenhum tem difusão nem rede em malha fechada.
+  \item \textbf{C4, garantias e validação realista}, ao estilo de Pajic: erro de modelo e latência tratados como parâmetros, e validação próxima da vida real.
+\end{itemize}
+
+\section{Perguntas de investigação}
+
+\begin{itemize}
+  \item \textbf{RQ1.} Quão perto do oráculo fica um MPC alimentado por previsores realistas, para vários perfis de operador, e quanto dessa distância a previsão explica (hipótese H1)? Um previsor de difusão condicional melhora os resultados face a GMM, LightGBM e regressão quantílica (hipótese H2)?
+  \item \textbf{RQ2.} Qual das três incertezas (PV, edifício, EVs) mais degrada o desempenho do controlo?
+  \item \textbf{RQ3.} O feedback da rede muda as conclusões face a uma validação sequencial, sem feedback?
+  \item \textbf{RQ4.} Os resultados mantêm-se com redes mais fracas, outros sites e outras épocas do ano?
+\end{itemize}
+
+\section{Fases}
+
+\subsection*{Fase 0: fundações}
+\begin{itemize}
+  \item Ler os papers pela ordem de leitura (passos 1 a 4 primeiro).
+  \item Ambiente em \texttt{.venv} (feito): acnportal, pandapower, cvxpy, numba.
+  \item \textbf{Conclusão:} consegues explicar, sem consultar, o ciclo do ACN-Sim e a formulação de Zhang e Engel.
+\end{itemize}
+
+\subsection*{Fase 1: dados}
+\begin{itemize}
+  \item Pedir o token do ACN-Data e descarregar sessões de um site (Caltech, JPL ou Office001). O procedimento está por confirmar no portal do ACN.
+  \item Escolher dados de PV (por exemplo PVGIS ou NREL) e de carga de edifício, confirmando a licença e a resolução temporal.
+  \item Definir a divisão treino, validação e teste por tempo, sem fuga de informação do futuro.
+  \item \textbf{Conclusão:} um dataset alinhado a 5 ou 15 minutos, com PV, edifício e sessões de EVs, e um README com as fontes.
+\end{itemize}
+
+\subsection*{Fase 2: rede e co-simulação (C1)}
+\begin{itemize}
+  \item Construtor paramétrico da rede em pandapower (Thurner), com a configuração A (forte) e B (fraca) do guia.
+  \item Ciclo em malha fechada: o MPC vê a tensão do período anterior.
+  \item Reproduzir primeiro o case study sequencial do ACN-Sim, para validar a tubagem antes de a mudar.
+  \item Tratar a não-convergência do power flow como evento.
+  \item \textbf{Conclusão:} um dia simulado com controlador trivial, com resultados iguais no modo sequencial e no modo malha fechada com feedback desligado.
+\end{itemize}
+
+\subsection*{Fase 3: baselines de controlo}
+\begin{itemize}
+  \item Sem controlo, algoritmos do acnportal (FCFS, EDF, LLF), MPC determinístico com previsão perfeita (limite superior) e com persistência.
+  \item \textbf{Conclusão:} tabela de baselines com custo, pico, violações e energia entregue, num conjunto de dias de teste.
+\end{itemize}
+
+\subsection*{Fase 4: previsores (H1 e H2)}
+\begin{itemize}
+  \item PV: persistência, regressão quantílica, e um modelo probabilístico ao estilo de Brown e Grob.
+  \item Edifício: persistência sazonal e um modelo simples, ao estilo de Loparo.
+  \item EVs: GMM e LightGBM (Genov), regressão quantílica, e difusão condicional generativa (DiffPLF, Li).
+  \item Métricas: CRPS, pinball loss, calibração da cobertura, e erro pontual para comparar com Ran e Cheng.
+  \item \textbf{Conclusão:} tabela de previsores com intervalos de confiança por bootstrap, e o veredicto sobre H2 ao nível da previsão.
+\end{itemize}
+
+\subsection*{Fase 5: MPC estocástico}
+\begin{itemize}
+  \item MPC por cenários, com amostras dos previsores da Fase 4, para que o mesmo controlador aceite qualquer previsor.
+  \item A formulação dos EVs vem do Engel (por carregador) e do Zhang (por evento). A estrutura estocástica e a tensão podem seguir o Saleem, que só controla a bateria.
+  \item Por decidir como os cenários entram (média, um MPC por cenário, ou um problema único).
+  \item Alternativa a avaliar depois de o MPC por cenários estar estável: MPC distribucionalmente robusto (Zhong), que usa as amostras do previsor com um círculo de Wasserstein. Pode ajustar-se ao PV, ao edifício e a perturbações agregadas de chegadas de EVs, mas assume sistema linear e perturbação aditiva.
+  \item Restrições de rede no MPC com um modelo linearizado (sensibilidades do power flow), e o power flow AC completo como planta.
+  \item Bateria estacionária como modelo próprio, porque o modelo de bateria do ACN-Sim é o dos EVs.
+  \item \textbf{Conclusão:} o MPC corre em tempo útil (passo de 5 min), com um perfil de tempo por passo.
+\end{itemize}
+
+\subsection*{Fase 6: experiências em malha fechada (C2, C3)}
+\begin{itemize}
+  \item Fatorial: previsor (perfeito, persistência, GMM, LightGBM, quantílica, difusão) por controlador (determinístico, estocástico) por rede (A, B) por feedback (ligado, desligado) por perfil de operador (custo, pico e rede, utilizadores).
+  \item Ablações: tornar perfeita uma incerteza de cada vez (PV, edifício, EVs), para responder a RQ2.
+  \item Robustez: treinar num site e testar noutro, e testar noutra época do ano (RQ4).
+  \item Estatística: várias sementes, intervalos de confiança, testes emparelhados por dia.
+  \item \textbf{Conclusão:} tabelas e figuras prontas para a tese, com um script que as regenera do zero.
+\end{itemize}
+
+\subsection*{Fase 7: garantias e erro de modelo (C4)}
+\begin{itemize}
+  \item Quantificar a diferença entre o modelo linearizado do MPC e a planta AC (erro de modelo).
+  \item Limitar a violação de restrições em função do erro de previsão e do atraso de medida, ao estilo de Pajic.
+  \item \textbf{Conclusão:} um resultado que se possa enunciar como proposição, com verificação numérica.
+\end{itemize}
+
+\subsection*{Fase 8: validação próxima da vida real (C4)}
+\begin{itemize}
+  \item Opções por ordem de realismo: dados reais de um site em replay, hardware-in-the-loop, teste num site real.
+  \item Perguntar ao professor que opção é viável. O paper do ACN-Sim menciona o ACN-Live para testes em hardware real, mas o acesso está por confirmar.
+  \item \textbf{Conclusão:} pelo menos uma validação com dados ou hardware reais, para fechar o arco da teoria à prática.
+\end{itemize}
+
+\subsection*{Fase 9: escrita}
+\begin{itemize}
+  \item Estrutura da tese: introdução, estado da arte (a partir da vault), modelo, previsores, controlador, co-simulação, resultados, conclusões.
+  \item Papers possíveis: P1 a co-simulação em malha fechada (C1), P2 difusão no controlo (C2), P3 o estudo completo (C3 e C4).
+  \item Reler Pajic aqui, para a narrativa.
+  \item \textbf{Conclusão:} primeiro rascunho completo, com todas as figuras regeneráveis.
+\end{itemize}
+
+\section{Riscos}
+
+\begin{center}
+\small\renewcommand{\arraystretch}{1.3}
+\begin{longtable}{@{}P{6.2cm}P{9.2cm}@{}}
+\toprule
+Risco & Mitigação \\
+\midrule
+\endhead
+O paper da hipótese (Jeste e Kamaci) não está disponível & Implementar a difusão a partir de DiffPLF e Zhang, e atualizar quando sair \\
+Cenários no MPC tornam o passo lento & Medir cedo, reduzir cenários por amostragem estratificada, usar solvers rápidos \\
+O power flow não converge em casos extremos & Tratar como evento, limitar o desequilíbrio, registar a frequência \\
+Dados de um só local (o ACN-Data é da Califórnia) limitam a generalização & Testar em vários sites do ACN-Data e discutir a limitação \\
+Âmbito demasiado grande & Fechar as fases 1 a 6 antes das 7 e 8; a fase 8 é a que mais pode escorregar \\
+A rede escolhida não é representativa & Duas configurações (A e B) e uma varredura da força da rede \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\section{Ordem recomendada}
+
+\begin{itemize}
+  \item Fases 0 a 3 primeiro, porque dão uma base que corre de ponta a ponta.
+  \item A Fase 4 pode correr em paralelo com a Fase 5.
+  \item As fases 7 e 8 só depois de a Fase 6 ter resultados estáveis.
+\end{itemize}
+
+\end{document}

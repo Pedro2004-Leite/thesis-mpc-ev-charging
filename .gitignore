@@ -1,0 +1,27 @@
+# ambientes e residuos
+.venv/
+__pycache__/
+.~lock.*
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+
+# pasta de entrada de PDFs, ainda nao processados
+papers_buffer/
+
+# repositorio do Overleaf: fonte de verdade propria, nao duplicar aqui
+relatorio-overleaf/
+
+# PDFs de terceiros (direitos de autor): ficam so na maquina local
+Thesis LIterature/Anexos/*.pdf
+
+# PDFs gerados localmente (relatorio em rascunho e guias)
+106812-Pedro-Leite.pdf
+
+# estado local do Obsidian
+Thesis LIterature/.obsidian/workspace.json
+Thesis LIterature/.obsidian/workspaces.json
